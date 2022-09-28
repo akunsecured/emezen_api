@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"github.com/akunsecured/emezen_api/models"
+	"github.com/akunsecured/emezen_api/security"
 	"github.com/akunsecured/emezen_api/utils"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -49,7 +50,7 @@ func (a *AuthServiceImpl) Register(userCredentials *models.UserCredentials) erro
 	}
 
 	if err == mongo.ErrNoDocuments {
-		userCredentials.Password, err = utils.EncryptPassword(userCredentials.Password)
+		userCredentials.Password, err = security.EncryptPassword(userCredentials.Password)
 		if err != nil {
 			return err
 		}
@@ -80,7 +81,7 @@ func (a *AuthServiceImpl) Login(userCredentials *models.UserCredentials) (*strin
 		return nil, err
 	}
 
-	err = utils.VerifyPassword(exists.Password, userCredentials.Password)
+	err = security.VerifyPassword(exists.Password, userCredentials.Password)
 	if err != nil {
 		return nil, utils.ErrInvalidPassword
 	}
@@ -93,7 +94,7 @@ func (a *AuthServiceImpl) Login(userCredentials *models.UserCredentials) (*strin
 // Update will check if the given account is in the database. If not, it will return an error.
 // Otherwise, it will update the credentials.
 func (a *AuthServiceImpl) Update(userCredentials *models.UserCredentials) error {
-	encryptedPassword, err := utils.EncryptPassword(userCredentials.Password)
+	encryptedPassword, err := security.EncryptPassword(userCredentials.Password)
 	if err != nil {
 		return err
 	}
