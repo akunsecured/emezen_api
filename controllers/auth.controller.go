@@ -6,6 +6,7 @@ import (
 	"github.com/akunsecured/emezen_api/utils"
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator"
+	"log"
 	"net/http"
 )
 
@@ -22,22 +23,23 @@ func NewAuthController(authService services.AuthService) AuthController {
 }
 
 func (ac *AuthController) Register(ctx *gin.Context) {
-	var credentials models.UserCredentials
-	if err := ctx.ShouldBindJSON(&credentials); err != nil {
+	var userDataWithCredentials models.UserDataWithCredentials
+	if err := ctx.ShouldBindJSON(&userDataWithCredentials); err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"message": err.Error()})
 		return
 	}
-	if err := validate.Struct(&credentials); err != nil {
+	if err := validate.Struct(&userDataWithCredentials); err != nil {
+		log.Print(err)
 		err = utils.ErrInvalidCredentialsFormat
 		ctx.JSON(http.StatusBadRequest, gin.H{"message": err.Error()})
 		return
 	}
-	err := ac.authService.Register(&credentials)
+	token, err := ac.authService.Register(&userDataWithCredentials)
 	if err != nil {
 		ctx.JSON(http.StatusBadGateway, gin.H{"message": err.Error()})
 		return
 	}
-	ctx.JSON(http.StatusOK, gin.H{"message": "Successfully registered"})
+	ctx.JSON(http.StatusOK, gin.H{"message": token})
 }
 
 func (ac *AuthController) Login(ctx *gin.Context) {

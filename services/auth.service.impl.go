@@ -13,12 +13,14 @@ import (
 
 type AuthServiceImpl struct {
 	authCollection *mongo.Collection
+	userService    UserService
 	ctx            context.Context
 }
 
-func NewAuthService(authCollection *mongo.Collection, ctx context.Context) AuthService {
+func NewAuthService(authCollection *mongo.Collection, userService UserService, ctx context.Context) AuthService {
 	return &AuthServiceImpl{
 		authCollection: authCollection,
+		userService:    userService,
 		ctx:            ctx,
 	}
 }
@@ -43,30 +45,47 @@ func (a *AuthServiceImpl) CheckIfExistsWithID(id string) (*models.UserCredential
 
 // Register will check if the given email address is already in the database.
 // If so, an error will be returned. Otherwise, it will be saved to the database.
-func (a *AuthServiceImpl) Register(userCredentials *models.UserCredentials) error {
+func (a *AuthServiceImpl) Register(userDataWithCredentials *models.UserDataWithCredentials) (*string, error) {
+	var userCredentials = userDataWithCredentials.Credentials
+
 	exists, err := a.CheckIfExistsWithEmail(userCredentials.Email)
 	if exists != nil {
-		return utils.ErrEmailIsAlreadyInUse
+		return nil, utils.ErrEmailIsAlreadyInUse
 	}
 
 	if err == mongo.ErrNoDocuments {
+		var userData = userDataWithCredentials.UserData
+		if len(userData.ContactEmail) == 0 {
+			userData.ContactEmail = userCredentials.Email
+		}
+		userId, err := a.userService.CreateUser(&userData)
+		if err != nil {
+			return nil, err
+		}
+
 		userCredentials.Password, err = security.EncryptPassword(userCredentials.Password)
 		if err != nil {
-			return err
+			return nil, err
 		}
 
 		userCredentials.CreatedAt = time.Now()
 		userCredentials.UpdatedAt = userCredentials.CreatedAt
 		userCredentials.ID = primitive.NewObjectID()
+		userCredentials.UserID = *userId
 
 		_, err = a.authCollection.InsertOne(a.ctx, userCredentials)
 		if err != nil {
-			return err
+			return nil, err
 		}
 
-		return nil
+		token, err := security.NewToken(*userId)
+		if err != nil {
+			return nil, err
+		}
+
+		return &token, nil
 	}
-	return err
+	return nil, err
 }
 
 // Login will check if the given email is in the database. If not, it will return an error.
@@ -86,8 +105,11 @@ func (a *AuthServiceImpl) Login(userCredentials *models.UserCredentials) (*strin
 		return nil, utils.ErrInvalidPassword
 	}
 
-	// TODO: replace with JWT token
-	var token = "token"
+	token, err := security.NewToken(exists.ID.Hex())
+	if err != nil {
+		return nil, err
+	}
+
 	return &token, nil
 }
 

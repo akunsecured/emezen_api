@@ -3,6 +3,9 @@ package services
 import (
 	"context"
 	"errors"
+	"github.com/akunsecured/emezen_api/utils"
+	"go.mongodb.org/mongo-driver/bson/primitive"
+	"time"
 
 	"github.com/akunsecured/emezen_api/models"
 	"go.mongodb.org/mongo-driver/bson"
@@ -21,9 +24,21 @@ func NewUserService(userCollection *mongo.Collection, ctx context.Context) UserS
 	}
 }
 
-func (u *UserServiceImpl) CreateUser(user *models.User) error {
-	_, err := u.userCollection.InsertOne(u.ctx, user)
-	return err
+func (u *UserServiceImpl) CreateUser(user *models.User) (*string, error) {
+	user.ID = primitive.NewObjectID()
+	user.CreatedAt = time.Now()
+	user.UpdatedAt = user.CreatedAt
+
+	result, err := u.userCollection.InsertOne(u.ctx, user)
+	if err != nil {
+		return nil, err
+	}
+
+	if oid, ok := result.InsertedID.(primitive.ObjectID); ok {
+		var oidHex = oid.Hex()
+		return &oidHex, nil
+	}
+	return nil, utils.ErrInsertedIDIsNotObjectID
 }
 
 func (u *UserServiceImpl) GetUser(name *string) (*models.User, error) {

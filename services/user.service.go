@@ -1,9 +1,11 @@
 package services
 
-import "github.com/akunsecured/emezen_api/models"
+import (
+	"github.com/akunsecured/emezen_api/models"
+)
 
 type UserService interface {
-	CreateUser(*models.User) error
+	CreateUser(*models.User) (*string, error)
 	GetUser(*string) (*models.User, error)
 	GetAll() ([]*models.User, error)
 	UpdateUser(*models.User) error

@@ -3,8 +3,10 @@ module github.com/akunsecured/emezen_api
 go 1.19
 
 require (
+	github.com/form3tech-oss/jwt-go v3.2.5+incompatible
 	github.com/gin-gonic/gin v1.8.1
 	github.com/go-playground/validator v9.31.0+incompatible
+	github.com/rs/cors v1.8.2
 	go.mongodb.org/mongo-driver v1.10.2
 	golang.org/x/crypto v0.0.0-20220622213112-05595931fe9d
 )
@@ -25,6 +27,7 @@ require (
 	github.com/montanaflynn/stats v0.0.0-20171201202039-1bf9dbcd8cbe // indirect
 	github.com/pelletier/go-toml/v2 v2.0.1 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
+	github.com/stretchr/testify v1.8.0 // indirect
 	github.com/ugorji/go/codec v1.2.7 // indirect
 	github.com/xdg-go/pbkdf2 v1.0.0 // indirect
 	github.com/xdg-go/scram v1.1.1 // indirect

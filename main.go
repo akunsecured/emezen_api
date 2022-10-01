@@ -3,14 +3,16 @@ package main
 import (
 	"context"
 	"fmt"
-	"log"
-
 	"github.com/akunsecured/emezen_api/controllers"
 	"github.com/akunsecured/emezen_api/services"
 	"github.com/gin-gonic/gin"
+	"github.com/rs/cors"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"go.mongodb.org/mongo-driver/mongo/readpref"
+	"log"
+	"net/http"
+	"time"
 )
 
 var (
@@ -52,13 +54,12 @@ func init() {
 	userController = controllers.NewUserController(userService)
 
 	authCollection = mongoDatabase.Collection("credentials")
-	authService = services.NewAuthService(authCollection, ctx)
+	authService = services.NewAuthService(authCollection, userService, ctx)
 	authController = controllers.NewAuthController(authService)
 
 	server = gin.Default()
 }
 
-// v1/api/user
 func main() {
 	defer func(mongoClient *mongo.Client, ctx context.Context) {
 		err := mongoClient.Disconnect(ctx)
@@ -71,5 +72,13 @@ func main() {
 	userController.RegisterUserRoutes(basePath)
 	authController.RegisterAuthRoutes(basePath)
 
-	log.Fatal(server.Run(":8080"))
+	corsConfig := cors.New(cors.Options{
+		AllowedOrigins:   []string{"*"},
+		AllowedMethods:   []string{"PUT", "PATCH", "GET", "POST", "DELETE", "OPTIONS"},
+		AllowCredentials: false,
+		MaxAge:           int(12 * time.Hour),
+	})
+	handler := corsConfig.Handler(server)
+
+	log.Fatal(http.ListenAndServe(":8080", handler))
 }
