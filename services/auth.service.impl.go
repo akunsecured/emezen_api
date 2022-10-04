@@ -25,6 +25,8 @@ func NewAuthService(authCollection *mongo.Collection, userService UserService, c
 	}
 }
 
+// CheckIfExistsWithEmail will check if there are any credentials with the given email address.
+// If so, it will be returned. Otherwise, it will return an error.
 func (a *AuthServiceImpl) CheckIfExistsWithEmail(email string) (*models.UserCredentials, error) {
 	var exists *models.UserCredentials
 	query := bson.D{bson.E{Key: "email", Value: email}}
@@ -32,6 +34,8 @@ func (a *AuthServiceImpl) CheckIfExistsWithEmail(email string) (*models.UserCred
 	return exists, err
 }
 
+// CheckIfExistsWithID will check if there are any user credentials with the given ID.
+// If so, it will be returned. Otherwise, it will return an error.
 func (a *AuthServiceImpl) CheckIfExistsWithID(id string) (*models.UserCredentials, error) {
 	var exists *models.UserCredentials
 	objID, err := primitive.ObjectIDFromHex(id)
@@ -45,7 +49,7 @@ func (a *AuthServiceImpl) CheckIfExistsWithID(id string) (*models.UserCredential
 
 // Register will check if the given email address is already in the database.
 // If so, an error will be returned. Otherwise, it will be saved to the database.
-func (a *AuthServiceImpl) Register(userDataWithCredentials *models.UserDataWithCredentials) (*string, error) {
+func (a *AuthServiceImpl) Register(userDataWithCredentials *models.UserDataWithCredentials) (*models.WrappedToken, error) {
 	var userCredentials = userDataWithCredentials.Credentials
 
 	exists, err := a.CheckIfExistsWithEmail(userCredentials.Email)
@@ -78,12 +82,17 @@ func (a *AuthServiceImpl) Register(userDataWithCredentials *models.UserDataWithC
 			return nil, err
 		}
 
-		token, err := security.NewToken(*userId)
+		userData.ID, err = primitive.ObjectIDFromHex(*userId)
 		if err != nil {
 			return nil, err
 		}
 
-		return &token, nil
+		wrappedToken, err := security.CreateAccessAndRefreshTokens(userData)
+		if err != nil {
+			return nil, err
+		}
+
+		return wrappedToken, nil
 	}
 	return nil, err
 }
@@ -91,7 +100,7 @@ func (a *AuthServiceImpl) Register(userDataWithCredentials *models.UserDataWithC
 // Login will check if the given email is in the database. If not, it will return an error.
 // Otherwise, it will check if the password matches with the one in the database. If so, it
 // will return a JWT token. Otherwise, it will return an error.
-func (a *AuthServiceImpl) Login(userCredentials *models.UserCredentials) (*string, error) {
+func (a *AuthServiceImpl) Login(userCredentials *models.UserCredentials) (*models.WrappedToken, error) {
 	exists, err := a.CheckIfExistsWithEmail(userCredentials.Email)
 	if err == mongo.ErrNoDocuments {
 		return nil, utils.ErrNoAccountWithThisEmail
@@ -105,12 +114,17 @@ func (a *AuthServiceImpl) Login(userCredentials *models.UserCredentials) (*strin
 		return nil, utils.ErrInvalidPassword
 	}
 
-	token, err := security.NewToken(exists.ID.Hex())
+	user, err := a.userService.GetUser(&exists.UserID)
+	if err != nil {
+		return nil, mongo.ErrNoDocuments
+	}
+
+	wrappedToken, err := security.CreateAccessAndRefreshTokens(*user)
 	if err != nil {
 		return nil, err
 	}
 
-	return &token, nil
+	return wrappedToken, nil
 }
 
 // Update will check if the given account is in the database. If not, it will return an error.
@@ -131,4 +145,27 @@ func (a *AuthServiceImpl) Update(userCredentials *models.UserCredentials) error 
 		return utils.ErrNotExists
 	}
 	return nil
+}
+
+// NewAccessToken will try to parse the incoming token string and create a new access token from
+// the user ID given in the refresh token's claims
+func (a *AuthServiceImpl) NewAccessToken(tokenStr string) (*string, error) {
+	claims, err := security.ParseToken(tokenStr)
+	if err != nil {
+		return nil, err
+	}
+
+	userId := (*claims)["sub"].(string)
+
+	user, err := a.userService.GetUser(&userId)
+	if err != nil {
+		return nil, err
+	}
+
+	newToken, err := security.NewAccessToken(*user)
+	if err != nil {
+		return nil, err
+	}
+
+	return &newToken, nil
 }

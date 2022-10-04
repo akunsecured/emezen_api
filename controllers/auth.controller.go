@@ -34,12 +34,12 @@ func (ac *AuthController) Register(ctx *gin.Context) {
 		ctx.JSON(http.StatusBadRequest, gin.H{"message": err.Error()})
 		return
 	}
-	token, err := ac.authService.Register(&userDataWithCredentials)
+	wrappedToken, err := ac.authService.Register(&userDataWithCredentials)
 	if err != nil {
 		ctx.JSON(http.StatusBadGateway, gin.H{"message": err.Error()})
 		return
 	}
-	ctx.JSON(http.StatusOK, gin.H{"message": token})
+	ctx.JSON(http.StatusOK, gin.H{"message": wrappedToken})
 }
 
 func (ac *AuthController) Login(ctx *gin.Context) {
@@ -53,7 +53,7 @@ func (ac *AuthController) Login(ctx *gin.Context) {
 		ctx.JSON(http.StatusBadRequest, gin.H{"message": err.Error()})
 		return
 	}
-	token, err := ac.authService.Login(&credentials)
+	wrappedToken, err := ac.authService.Login(&credentials)
 	if err != nil {
 		switch err {
 		case utils.ErrInvalidPassword:
@@ -65,7 +65,7 @@ func (ac *AuthController) Login(ctx *gin.Context) {
 		}
 		return
 	}
-	ctx.JSON(http.StatusOK, gin.H{"message": token})
+	ctx.JSON(http.StatusOK, gin.H{"message": wrappedToken})
 }
 
 func (ac *AuthController) Update(ctx *gin.Context) {
@@ -92,9 +92,25 @@ func (ac *AuthController) Update(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, gin.H{"message": "Successfully updated"})
 }
 
+func (ac *AuthController) RefreshToken(ctx *gin.Context) {
+	tokenStr := ctx.GetHeader("Authorization")
+	print("asd: " + tokenStr)
+	if tokenStr == "" {
+		ctx.JSON(http.StatusUnauthorized, gin.H{"message": utils.ErrMissingAuthToken.Error()})
+		return
+	}
+	newToken, err := ac.authService.NewAccessToken(tokenStr)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"message": err.Error()})
+		return
+	}
+	ctx.JSON(http.StatusOK, gin.H{"message": newToken})
+}
+
 func (ac *AuthController) RegisterAuthRoutes(rg *gin.RouterGroup) {
 	authRoute := rg.Group("/auth")
 	authRoute.POST("/register", ac.Register)
 	authRoute.POST("/login", ac.Login)
 	authRoute.PUT("/update", ac.Update)
+	authRoute.GET("/refresh", ac.RefreshToken)
 }

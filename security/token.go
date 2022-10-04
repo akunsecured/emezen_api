@@ -2,8 +2,10 @@ package security
 
 import (
 	"fmt"
+	"github.com/akunsecured/emezen_api/models"
 	"github.com/akunsecured/emezen_api/utils"
 	"github.com/form3tech-oss/jwt-go"
+	"strings"
 	"time"
 )
 
@@ -11,15 +13,50 @@ var (
 	JwtSecretKey = []byte("Emezen_SUP3R_S3CR3T_K3Y")
 )
 
-func NewToken(userId string) (string, error) {
-	claims := jwt.StandardClaims{
-		Id:        userId,
-		Issuer:    userId,
-		IssuedAt:  time.Now().Unix(),
-		ExpiresAt: time.Now().Add(time.Minute * 30).Unix(),
+type JwtUserClaims struct {
+	User models.User `json:"user"`
+	jwt.StandardClaims
+}
+
+func NewAccessToken(user models.User) (string, error) {
+	userId := user.ID.Hex()
+	claims := JwtUserClaims{
+		user,
+		jwt.StandardClaims{
+			Subject:   userId,
+			IssuedAt:  time.Now().Unix(),
+			ExpiresAt: time.Now().Add(time.Hour * 1).Unix(),
+		},
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	return token.SignedString(JwtSecretKey)
+}
+
+func NewRefreshToken(userId string) (string, error) {
+	claims := jwt.StandardClaims{
+		Subject:   userId,
+		IssuedAt:  time.Now().Unix(),
+		ExpiresAt: time.Now().Add(time.Hour * 48).Unix(),
+	}
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	return token.SignedString(JwtSecretKey)
+}
+
+func CreateAccessAndRefreshTokens(user models.User) (*models.WrappedToken, error) {
+	accessToken, err := NewAccessToken(user)
+	if err != nil {
+		return nil, err
+	}
+
+	refreshToken, err := NewRefreshToken(user.ID.Hex())
+	if err != nil {
+		return nil, err
+	}
+
+	return &models.WrappedToken{
+		AccessToken:  accessToken,
+		RefreshToken: refreshToken,
+	}, nil
 }
 
 func ValidateSignedMethod(token *jwt.Token) (interface{}, error) {
@@ -29,16 +66,19 @@ func ValidateSignedMethod(token *jwt.Token) (interface{}, error) {
 	return JwtSecretKey, nil
 }
 
-func ParseToken(tokenString string) (*jwt.StandardClaims, error) {
-	claims := new(jwt.StandardClaims)
-	token, err := jwt.ParseWithClaims(tokenString, claims, ValidateSignedMethod)
+func ParseToken(tokenString string) (*jwt.MapClaims, error) {
+	if !strings.HasPrefix(tokenString, "Bearer ") {
+		return nil, utils.ErrInvalidTokenFormat
+	}
+	tokenString = strings.Split(tokenString, " ")[1]
+	token, err := jwt.Parse(tokenString, ValidateSignedMethod)
 	if err != nil {
 		return nil, err
 	}
-	var ok bool
-	claims, ok = token.Claims.(*jwt.StandardClaims)
-	if !ok || !token.Valid {
-		return nil, utils.ErrInvalidAuthToken
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok {
+		return nil, utils.ErrTokenParseError
 	}
-	return claims, nil
+
+	return &claims, nil
 }

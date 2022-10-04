@@ -2,7 +2,6 @@ package services
 
 import (
 	"context"
-	"errors"
 	"github.com/akunsecured/emezen_api/utils"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"time"
@@ -41,42 +40,15 @@ func (u *UserServiceImpl) CreateUser(user *models.User) (*string, error) {
 	return nil, utils.ErrInsertedIDIsNotObjectID
 }
 
-func (u *UserServiceImpl) GetUser(name *string) (*models.User, error) {
+func (u *UserServiceImpl) GetUser(userId *string) (*models.User, error) {
 	var user *models.User
-	// db.collection.find({name: name})
-	query := bson.D{bson.E{Key: "name", Value: name}}
-	err := u.userCollection.FindOne(u.ctx, query).Decode(&user)
+	objID, err := primitive.ObjectIDFromHex(*userId)
+	if err != nil {
+		return nil, err
+	}
+	query := bson.D{bson.E{Key: "_id", Value: objID}}
+	err = u.userCollection.FindOne(u.ctx, query).Decode(&user)
 	return user, err
-}
-
-func (u *UserServiceImpl) GetAll() ([]*models.User, error) {
-	var users []*models.User
-	cursor, err := u.userCollection.Find(u.ctx, bson.D{})
-	if err != nil {
-		return nil, err
-	}
-	for cursor.Next(u.ctx) {
-		var user models.User
-		err := cursor.Decode(&user)
-		if err != nil {
-			return nil, err
-		}
-		users = append(users, &user)
-	}
-
-	if err := cursor.Err(); err != nil {
-		return nil, err
-	}
-
-	err = cursor.Close(u.ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	if len(users) == 0 {
-		return nil, errors.New("Documents not found")
-	}
-	return users, nil
 }
 
 func (u *UserServiceImpl) UpdateUser(user *models.User) error {
@@ -89,14 +61,18 @@ func (u *UserServiceImpl) UpdateUser(user *models.User) error {
 			return errors.New("No matched document found for update")
 		}
 	*/
-	return nil
+	return utils.ErrUnimplementedMethod
 }
 
-func (u *UserServiceImpl) DeleteUser(name *string) error {
-	filter := bson.D{bson.E{Key: "name", Value: name}}
+func (u *UserServiceImpl) DeleteUser(userId *string) error {
+	objID, err := primitive.ObjectIDFromHex(*userId)
+	if err != nil {
+		return err
+	}
+	filter := bson.D{bson.E{Key: "_id", Value: objID}}
 	result, _ := u.userCollection.DeleteOne(u.ctx, filter)
 	if result.DeletedCount != 1 {
-		return errors.New("No matched document found for update")
+		return utils.ErrNoMatchedDocumentFoundForDelete
 	}
 	return nil
 }
