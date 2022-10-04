@@ -2,8 +2,10 @@ package controllers
 
 import (
 	"github.com/akunsecured/emezen_api/models"
+	"github.com/akunsecured/emezen_api/security"
 	"github.com/akunsecured/emezen_api/services"
 	"github.com/akunsecured/emezen_api/utils"
+	"github.com/form3tech-oss/jwt-go"
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator"
 	"log"
@@ -20,6 +22,20 @@ func NewAuthController(authService services.AuthService) AuthController {
 	return AuthController{
 		authService: authService,
 	}
+}
+
+func (ac *AuthController) CheckHeaderAuthorization(ctx *gin.Context) (*jwt.MapClaims, error) {
+	tokenStr := ctx.GetHeader("Authorization")
+	if tokenStr == "" {
+		return nil, utils.ErrMissingAuthToken
+	}
+
+	claims, err := security.ParseToken(tokenStr)
+	if err != nil {
+		return nil, err
+	}
+
+	return claims, nil
 }
 
 func (ac *AuthController) Register(ctx *gin.Context) {
@@ -93,18 +109,33 @@ func (ac *AuthController) Update(ctx *gin.Context) {
 }
 
 func (ac *AuthController) RefreshToken(ctx *gin.Context) {
-	tokenStr := ctx.GetHeader("Authorization")
-	print("asd: " + tokenStr)
-	if tokenStr == "" {
-		ctx.JSON(http.StatusUnauthorized, gin.H{"message": utils.ErrMissingAuthToken.Error()})
+	claims, err := ac.CheckHeaderAuthorization(ctx)
+	if err != nil {
+		ctx.JSON(http.StatusUnauthorized, gin.H{"message": err.Error()})
 		return
 	}
-	newToken, err := ac.authService.NewAccessToken(tokenStr)
+
+	newToken, err := ac.authService.NewAccessToken(claims)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"message": err.Error()})
 		return
 	}
 	ctx.JSON(http.StatusOK, gin.H{"message": newToken})
+}
+
+func (ac *AuthController) CurrentUser(ctx *gin.Context) {
+	claims, err := ac.CheckHeaderAuthorization(ctx)
+	if err != nil {
+		ctx.JSON(http.StatusUnauthorized, gin.H{"message": err.Error()})
+		return
+	}
+
+	currentUser, err := ac.authService.CurrentUser(claims)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"message": err.Error()})
+		return
+	}
+	ctx.JSON(http.StatusOK, gin.H{"message": currentUser})
 }
 
 func (ac *AuthController) RegisterAuthRoutes(rg *gin.RouterGroup) {
@@ -113,4 +144,5 @@ func (ac *AuthController) RegisterAuthRoutes(rg *gin.RouterGroup) {
 	authRoute.POST("/login", ac.Login)
 	authRoute.PUT("/update", ac.Update)
 	authRoute.GET("/refresh", ac.RefreshToken)
+	authRoute.GET("/current", ac.CurrentUser)
 }

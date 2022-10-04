@@ -5,6 +5,7 @@ import (
 	"github.com/akunsecured/emezen_api/models"
 	"github.com/akunsecured/emezen_api/security"
 	"github.com/akunsecured/emezen_api/utils"
+	"github.com/form3tech-oss/jwt-go"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -149,15 +150,8 @@ func (a *AuthServiceImpl) Update(userCredentials *models.UserCredentials) error 
 
 // NewAccessToken will try to parse the incoming token string and create a new access token from
 // the user ID given in the refresh token's claims
-func (a *AuthServiceImpl) NewAccessToken(tokenStr string) (*string, error) {
-	claims, err := security.ParseToken(tokenStr)
-	if err != nil {
-		return nil, err
-	}
-
-	userId := (*claims)["sub"].(string)
-
-	user, err := a.userService.GetUser(&userId)
+func (a *AuthServiceImpl) NewAccessToken(claims *jwt.MapClaims) (*string, error) {
+	user, err := a.CurrentUser(claims)
 	if err != nil {
 		return nil, err
 	}
@@ -168,4 +162,15 @@ func (a *AuthServiceImpl) NewAccessToken(tokenStr string) (*string, error) {
 	}
 
 	return &newToken, nil
+}
+
+func (a *AuthServiceImpl) CurrentUser(claims *jwt.MapClaims) (*models.User, error) {
+	userId := (*claims)["sub"].(string)
+
+	user, err := a.userService.GetUser(&userId)
+	if err != nil {
+		return nil, err
+	}
+
+	return user, nil
 }
