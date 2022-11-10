@@ -37,8 +37,6 @@ func (p *ProductServiceImpl) AddProduct(product *models.Product) (*string, error
 
 	if oid, ok := result.InsertedID.(primitive.ObjectID); ok {
 		var oidHex = oid.Hex()
-		// TODO: implement adding ID to user
-		// err = p.userService.UpdateUser()
 		return &oidHex, nil
 	}
 	return nil, utils.ErrInsertedIDIsNotObjectID
@@ -79,9 +77,41 @@ func (p *ProductServiceImpl) GetAllProducts() ([]*models.Product, error) {
 	return products, err
 }
 
-func (p *ProductServiceImpl) UpdateProduct(oldProduct *models.Product) error {
-	// TODO: implement update product
-	return nil
+func (p *ProductServiceImpl) GetAllProductsOfUser(userId *string) ([]*models.Product, error) {
+	products, err := p.GetAllProducts()
+	if err != nil {
+		return nil, err
+	}
+
+	var result []*models.Product
+
+	for _, product := range products {
+		if product.SellerID == *userId {
+			result = append(result, product)
+		}
+	}
+
+	return result, err
+}
+
+func (p *ProductServiceImpl) UpdateProduct(product *models.Product) error {
+	filter := bson.D{bson.E{Key: "_id", Value: product.ID}}
+
+	update := bson.D{bson.E{Key: "$set", Value: bson.D{
+		bson.E{Key: "seller_id", Value: product.SellerID},
+		bson.E{Key: "name", Value: product.Name},
+		bson.E{Key: "price", Value: product.Price},
+		bson.E{Key: "images", Value: product.Images},
+		bson.E{Key: "details", Value: product.Details},
+		bson.E{Key: "quantity", Value: product.Quantity},
+		bson.E{Key: "category", Value: product.Category},
+		bson.E{Key: "updated_at", Value: time.Now()},
+	}}}
+	result, err := p.productCollection.UpdateOne(p.ctx, filter, update)
+	if result.MatchedCount != 1 {
+		return utils.ErrNotExists
+	}
+	return err
 }
 
 func (p *ProductServiceImpl) DeleteProduct(productId *string) error {

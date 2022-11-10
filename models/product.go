@@ -14,7 +14,7 @@ type Product struct {
 	Images    []string           `json:"images" bson:"images"`
 	Details   string             `json:"details" bson:"details" validate:"required,min=1,max=500"`
 	Quantity  int32              `json:"quantity" bson:"quantity" validate:"required,min=1,max=100"`
-	Category  Category           `json:"category" bson:"category" validate:"required"`
+	Category  Category           `json:"category" bson:"category"`
 	CreatedAt time.Time          `json:"created_at,omitempty" bson:"created_at"`
 	UpdatedAt time.Time          `json:"updated_at,omitempty" bson:"updated_at"`
 }

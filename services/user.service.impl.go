@@ -2,9 +2,10 @@ package services
 
 import (
 	"context"
+	"time"
+
 	"github.com/akunsecured/emezen_api/utils"
 	"go.mongodb.org/mongo-driver/bson/primitive"
-	"time"
 
 	"github.com/akunsecured/emezen_api/models"
 	"go.mongodb.org/mongo-driver/bson"
@@ -53,15 +54,23 @@ func (u *UserServiceImpl) GetUser(userId *string) (*models.User, error) {
 }
 
 func (u *UserServiceImpl) UpdateUser(user *models.User) error {
-	// TODO: Fix the update of the profile
-	/*
-		filter := bson.D{bson.E{Key: "name", Value: user.Name}}
-		update := bson.D{bson.E{Key: "$set", Value: bson.D{bson.E{Key: "name", Value: user.Name}, bson.E{Key: "email", Value: user.Email}, bson.E{Key: "age", Value: user.Age}}}}
-		result, _ := u.userCollection.UpdateOne(u.ctx, filter, update)
-		if result.MatchedCount != 1 {
-			return errors.New("No matched document found for update")
-		}
-	*/
+	filter := bson.D{bson.E{Key: "name", Value: user.ID}}
+	update := bson.D{bson.E{Key: "$set", Value: bson.D{
+		bson.E{Key: "first_name", Value: user.FirstName},
+		bson.E{Key: "last_name", Value: user.LastName},
+		bson.E{Key: "age", Value: user.Age},
+		bson.E{Key: "contact_email", Value: user.ContactEmail},
+		bson.E{Key: "phone_number", Value: user.PhoneNumber},
+		bson.E{Key: "about", Value: user.About},
+		bson.E{Key: "profile_picture", Value: user.ProfilePicture},
+		bson.E{Key: "credits", Value: user.Credits},
+		bson.E{Key: "updated_at", Value: user.UpdatedAt},
+	}}}
+
+	result, _ := u.userCollection.UpdateOne(u.ctx, filter, update)
+	if result.MatchedCount != 1 {
+		return utils.ErrNotExists
+	}
 	return utils.ErrUnimplementedMethod
 }
 
