@@ -12,6 +12,7 @@ type User struct {
 	Age          int                `json:"age" bson:"age" validate:"required,min=13,max=100"`
 	ContactEmail string             `json:"contact_email" bson:"contact_email"`
 	PhoneNumber  int                `json:"phone_number" bson:"phone_number"`
+	Credits      int                `json:"credits" bson:"credits"`
 	CreatedAt    time.Time          `json:"created_at,omitempty" bson:"created_at"`
 	UpdatedAt    time.Time          `json:"updated_at,omitempty" bson:"updated_at"`
 }

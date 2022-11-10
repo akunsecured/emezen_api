@@ -1,10 +1,11 @@
 package controllers
 
 import (
+	"net/http"
+
 	"github.com/akunsecured/emezen_api/security"
 	"github.com/akunsecured/emezen_api/utils"
 	"github.com/form3tech-oss/jwt-go"
-	"net/http"
 
 	"github.com/akunsecured/emezen_api/models"
 	"github.com/akunsecured/emezen_api/services"
@@ -48,7 +49,7 @@ func (uc *UserController) GetUser(ctx *gin.Context) {
 		ctx.JSON(http.StatusBadGateway, gin.H{"message": err.Error()})
 		return
 	}
-	ctx.JSON(http.StatusOK, user)
+	ctx.JSON(http.StatusOK, gin.H{"message": user})
 }
 
 func (uc *UserController) UpdateUser(ctx *gin.Context) {

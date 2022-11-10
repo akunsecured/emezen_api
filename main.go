@@ -3,6 +3,10 @@ package main
 import (
 	"context"
 	"fmt"
+	"log"
+	"net/http"
+	"time"
+
 	"github.com/akunsecured/emezen_api/controllers"
 	"github.com/akunsecured/emezen_api/services"
 	"github.com/gin-gonic/gin"
@@ -10,23 +14,23 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"go.mongodb.org/mongo-driver/mongo/readpref"
-	"log"
-	"net/http"
-	"time"
 )
 
 var (
-	server         *gin.Engine
-	ctx            context.Context
-	mongoClient    *mongo.Client
-	mongoDatabase  *mongo.Database
-	userCollection *mongo.Collection
-	userService    services.UserService
-	userController controllers.UserController
-	authCollection *mongo.Collection
-	authService    services.AuthService
-	authController controllers.AuthController
-	err            error
+	server            *gin.Engine
+	ctx               context.Context
+	mongoClient       *mongo.Client
+	mongoDatabase     *mongo.Database
+	userCollection    *mongo.Collection
+	userService       services.UserService
+	userController    controllers.UserController
+	authCollection    *mongo.Collection
+	authService       services.AuthService
+	authController    controllers.AuthController
+	productCollection *mongo.Collection
+	productService    services.ProductService
+	productController controllers.ProductController
+	err               error
 )
 
 // This function runs before the main()
@@ -57,6 +61,10 @@ func init() {
 	authService = services.NewAuthService(authCollection, userService, ctx)
 	authController = controllers.NewAuthController(authService)
 
+	productCollection = mongoDatabase.Collection("products")
+	productService = services.NewProductService(productCollection, userService, ctx)
+	productController = controllers.NewProductController(productService)
+
 	server = gin.Default()
 }
 
@@ -71,14 +79,15 @@ func main() {
 	basePath := server.Group("/api").Group("/v1")
 	userController.RegisterUserRoutes(basePath)
 	authController.RegisterAuthRoutes(basePath)
+	productController.RegisterProductRoutes(basePath)
 
 	corsConfig := cors.New(cors.Options{
 		AllowedOrigins:   []string{"*"},
 		AllowedMethods:   []string{"PUT", "PATCH", "GET", "POST", "DELETE", "OPTIONS"},
-		AllowCredentials: false,
+		AllowCredentials: true,
 		MaxAge:           int(12 * time.Hour),
 	})
 	handler := corsConfig.Handler(server)
 
-	log.Fatal(http.ListenAndServe(":8080", handler))
+	log.Fatal(http.ListenAndServe("localhost:8080", handler))
 }

@@ -15,4 +15,5 @@ var (
 	ErrInsertedIDIsNotObjectID         = errors.New("the variable InsertedID is not in the correct type")
 	ErrNoMatchedDocumentFoundForDelete = errors.New("no matched document found for delete")
 	ErrUnimplementedMethod             = errors.New("unimplemented method")
+	ErrInvalidProductFormat            = errors.New("bad product format")
 )

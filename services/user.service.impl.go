@@ -27,6 +27,7 @@ func (u *UserServiceImpl) CreateUser(user *models.User) (*string, error) {
 	user.ID = primitive.NewObjectID()
 	user.CreatedAt = time.Now()
 	user.UpdatedAt = user.CreatedAt
+	user.Credits = 0
 
 	result, err := u.userCollection.InsertOne(u.ctx, user)
 	if err != nil {
