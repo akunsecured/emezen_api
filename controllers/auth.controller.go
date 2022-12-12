@@ -1,6 +1,9 @@
 package controllers
 
 import (
+	"log"
+	"net/http"
+
 	"github.com/akunsecured/emezen_api/models"
 	"github.com/akunsecured/emezen_api/security"
 	"github.com/akunsecured/emezen_api/services"
@@ -8,8 +11,6 @@ import (
 	"github.com/form3tech-oss/jwt-go"
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator"
-	"log"
-	"net/http"
 )
 
 type AuthController struct {
@@ -138,6 +139,21 @@ func (ac *AuthController) CurrentUser(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, gin.H{"message": currentUser})
 }
 
+func (ac *AuthController) DeleteUser(ctx *gin.Context) {
+	claims, err := ac.CheckHeaderAuthorization(ctx)
+	if err != nil {
+		ctx.JSON(http.StatusUnauthorized, gin.H{"message": err.Error()})
+		return
+	}
+
+	err = ac.authService.DeleteUser(claims)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"message": err.Error()})
+		return
+	}
+	ctx.JSON(http.StatusNoContent, nil)
+}
+
 func (ac *AuthController) RegisterAuthRoutes(rg *gin.RouterGroup) {
 	authRoute := rg.Group("/auth")
 	authRoute.POST("/register", ac.Register)
@@ -145,4 +161,5 @@ func (ac *AuthController) RegisterAuthRoutes(rg *gin.RouterGroup) {
 	authRoute.PUT("/update", ac.Update)
 	authRoute.GET("/refresh", ac.RefreshToken)
 	authRoute.GET("/current", ac.CurrentUser)
+	authRoute.DELETE("/delete", ac.DeleteUser)
 }

@@ -2,6 +2,8 @@ package services
 
 import (
 	"context"
+	"time"
+
 	"github.com/akunsecured/emezen_api/models"
 	"github.com/akunsecured/emezen_api/security"
 	"github.com/akunsecured/emezen_api/utils"
@@ -9,7 +11,6 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
-	"time"
 )
 
 type AuthServiceImpl struct {
@@ -46,6 +47,16 @@ func (a *AuthServiceImpl) CheckIfExistsWithID(id string) (*models.UserCredential
 	query := bson.D{bson.E{Key: "_id", Value: objID}}
 	err = a.authCollection.FindOne(a.ctx, query).Decode(&exists)
 	return exists, err
+}
+
+func (a *AuthServiceImpl) DeleteCredentials(id string) error {
+	query := bson.D{bson.E{Key: "user_id", Value: id}}
+	result, err := a.authCollection.DeleteOne(a.ctx, query)
+	if result.DeletedCount != 1 {
+		return utils.ErrNoMatchedDocumentFoundForDelete
+	}
+
+	return err
 }
 
 // Register will check if the given email address is already in the database.
@@ -173,4 +184,17 @@ func (a *AuthServiceImpl) CurrentUser(claims *jwt.MapClaims) (*models.User, erro
 	}
 
 	return user, nil
+}
+
+func (a *AuthServiceImpl) DeleteUser(claims *jwt.MapClaims) error {
+	userId := (*claims)["sub"].(string)
+
+	err := a.userService.DeleteUser(&userId)
+	if err != nil {
+		return err
+	}
+
+	err = a.DeleteCredentials(userId)
+
+	return err
 }

@@ -12,10 +12,8 @@ type User struct {
 	LastName       string             `json:"last_name" bson:"last_name" validate:"required,min=1,max=50"`
 	Age            int                `json:"age" bson:"age" validate:"required,min=13,max=100"`
 	ContactEmail   string             `json:"contact_email" bson:"contact_email"`
-	PhoneNumber    int                `json:"phone_number" bson:"phone_number"`
-	About          string             `json:"about" bson:"about" validate:"max=200"`
 	ProfilePicture string             `json:"profile_picture" bson:"profile_picture"`
-	Credits        int                `json:"credits" bson:"credits"`
+	Credits        float32            `json:"credits" bson:"credits"`
 	CreatedAt      time.Time          `json:"created_at,omitempty" bson:"created_at"`
 	UpdatedAt      time.Time          `json:"updated_at,omitempty" bson:"updated_at"`
 }

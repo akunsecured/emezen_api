@@ -11,4 +11,5 @@ type AuthService interface {
 	Update(*models.UserCredentials) error
 	NewAccessToken(*jwt.MapClaims) (*string, error)
 	CurrentUser(*jwt.MapClaims) (*models.User, error)
+	DeleteUser(*jwt.MapClaims) error
 }

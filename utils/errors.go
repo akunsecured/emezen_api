@@ -16,4 +16,8 @@ var (
 	ErrNoMatchedDocumentFoundForDelete = errors.New("no matched document found for delete")
 	ErrUnimplementedMethod             = errors.New("unimplemented method")
 	ErrInvalidProductFormat            = errors.New("bad product format")
+	ErrEmptyCart                       = errors.New("tried to buy when cart was empty")
+	ErrOwnerCannotBuy                  = errors.New("the product's owner cannot buy the product")
+	ErrNotEnoughProducts               = errors.New("not enough products to buy")
+	ErrNotEnoughCredits                = errors.New("user does not have enough credits")
 )

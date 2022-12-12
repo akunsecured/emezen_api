@@ -10,36 +10,49 @@ import (
 	"github.com/akunsecured/emezen_api/controllers"
 	"github.com/akunsecured/emezen_api/services"
 	"github.com/gin-gonic/gin"
+	"github.com/joho/godotenv"
 	"github.com/rs/cors"
 	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/gridfs"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"go.mongodb.org/mongo-driver/mongo/readpref"
 )
 
 var (
-	server            *gin.Engine
-	ctx               context.Context
-	mongoClient       *mongo.Client
-	mongoDatabase     *mongo.Database
-	userCollection    *mongo.Collection
-	userService       services.UserService
-	userController    controllers.UserController
-	authCollection    *mongo.Collection
-	authService       services.AuthService
-	authController    controllers.AuthController
-	productCollection *mongo.Collection
-	productService    services.ProductService
-	productController controllers.ProductController
-	err               error
+	server                    *gin.Engine
+	ctx                       context.Context
+	mongoClient               *mongo.Client
+	mongoDatabase             *mongo.Database
+	userCollection            *mongo.Collection
+	userService               services.UserService
+	userController            controllers.UserController
+	authCollection            *mongo.Collection
+	authService               services.AuthService
+	authController            controllers.AuthController
+	productCollection         *mongo.Collection
+	productObserverCollection *mongo.Collection
+	productService            services.ProductService
+	productController         controllers.ProductController
+	err                       error
+	envMap                    map[string]string
+	bucket                    *gridfs.Bucket
 )
 
 // This function runs before the main()
 func init() {
 	fmt.Println("Connecting to MongoDB...")
 
+	envMap, err = godotenv.Read(".env")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	dbUri := envMap["DB_CONNECTION"]
+	dbName := envMap["DATABASE_NAME"]
+
 	ctx = context.TODO()
 
-	mongoConnection := options.Client().ApplyURI("mongodb://localhost:27017")
+	mongoConnection := options.Client().ApplyURI(dbUri)
 	mongoClient, err = mongo.Connect(ctx, mongoConnection)
 	if err != nil {
 		log.Fatal(err)
@@ -51,7 +64,7 @@ func init() {
 
 	fmt.Println("Connected to MongoDB")
 
-	mongoDatabase = mongoClient.Database("emezendb")
+	mongoDatabase = mongoClient.Database(dbName)
 
 	userCollection = mongoDatabase.Collection("users")
 	userService = services.NewUserService(userCollection, ctx)
@@ -62,7 +75,8 @@ func init() {
 	authController = controllers.NewAuthController(authService)
 
 	productCollection = mongoDatabase.Collection("products")
-	productService = services.NewProductService(productCollection, userService, ctx)
+	productObserverCollection = mongoDatabase.Collection("product_observers")
+	productService = services.NewProductService(productCollection, productObserverCollection, userService, ctx)
 	productController = controllers.NewProductController(productService)
 
 	server = gin.Default()
@@ -90,5 +104,10 @@ func main() {
 	})
 	handler := corsConfig.Handler(server)
 
-	log.Fatal(http.ListenAndServe("localhost:8080", handler))
+	host := envMap["HOST"]
+	port := envMap["PORT_NUMBER"]
+
+	address := host + ":" + port
+
+	log.Fatal(http.ListenAndServe(address, handler))
 }
