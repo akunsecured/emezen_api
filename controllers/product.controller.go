@@ -95,13 +95,10 @@ func (pc *ProductController) GetAllProducts(ctx *gin.Context) {
 	}
 
 	nameFilter := ctx.Query("name")
-	fmt.Println(nameFilter)
 
 	categoryQuery := ctx.Query("categories")
-	fmt.Println(categoryQuery)
 
 	categories := strings.Split(categoryQuery, ",")
-	fmt.Println(categories)
 
 	categoryFilter := []int64{}
 	for _, category := range categories {
@@ -109,7 +106,6 @@ func (pc *ProductController) GetAllProducts(ctx *gin.Context) {
 			categoryFilter = append(categoryFilter, s)
 		}
 	}
-	fmt.Println(categoryFilter)
 
 	priceFromQuery := ctx.Query("price_from")
 	priceFromFilter := 0.0
@@ -120,7 +116,6 @@ func (pc *ProductController) GetAllProducts(ctx *gin.Context) {
 			return
 		}
 	}
-	fmt.Println(priceFromFilter)
 
 	priceToQuery := ctx.Query("price_to")
 	priceToFilter := 999.99
@@ -131,7 +126,6 @@ func (pc *ProductController) GetAllProducts(ctx *gin.Context) {
 			return
 		}
 	}
-	fmt.Println(priceToFilter)
 
 	products, err := pc.productService.GetAllProducts()
 	if err != nil {
@@ -292,7 +286,6 @@ func (pc *ProductController) UploadProductImages(ctx *gin.Context) {
 		}
 	}
 
-	fmt.Println(fileNames)
 	product.Images = append(product.Images, fileNames...)
 	pc.productService.UpdateProduct(product)
 
